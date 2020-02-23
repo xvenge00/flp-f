@@ -42,6 +42,13 @@ data Rule = Rule State AlphabetChar State
 instance Show Rule where
     show (Rule state char state_next) = show state ++ "," ++ show char ++ "," ++ show state_next    -- TODO don't show epsilon (-)
 
+data Rules = Rules [Rule]
+    deriving Eq
+instance Show Rules where
+    show (Rules []) = ""
+    show (Rules r) = tail $ foldl addNewLine "" (map show r)
+                            where addNewLine a b = a ++ "\n" ++ b
+
 
 parseRule :: [String] -> Maybe Rule
 parseRule [state, [char], stateNext] = Just $ Rule (parseState state) (AlphabetChar char) (parseState stateNext)
@@ -53,8 +60,10 @@ parseRulesImpl lines
     |lines == [] = []
     |otherwise = parseRule ( splitBy ',' $ head lines ) : (parseRulesImpl $ tail lines)
 
-parseRules :: [String] -> Maybe [Rule]
-parseRules lines = sequence $ parseRulesImpl lines
+parseRules :: [String] -> Maybe Rules
+parseRules lines = case sequence $ parseRulesImpl lines of
+                    Just x -> Just $ Rules x
+                    Nothing -> Nothing
     
 parseState :: String -> State
 parseState state = State state
@@ -70,7 +79,7 @@ data FSA = FSA {
     alphabet::Alphabet,
     start_state::State,
     final_states::States,
-    rules::[Rule]
+    rules::Rules
 } deriving (Eq)
 
 -- instance Show State where
@@ -96,7 +105,7 @@ parse2FSA repr = do
 
 determinize :: FSA -> FSA
 -- TODO
-determinize dka = FSA (States [State "staaaaaav1", State "s2"]) (Alphabet [AlphabetChar 'a', AlphabetChar 'b', AlphabetChar 'c']) (State "s1") (States [State "s1", State "s2"]) [Rule (State "a") (AlphabetChar 'a') (State "a")]
+determinize dka = FSA (States [State "staaaaaav1", State "s2"]) (Alphabet [AlphabetChar 'a', AlphabetChar 'b', AlphabetChar 'c']) (State "s1") (States [State "s1", State "s2"]) (Rules [Rule (State "a") (AlphabetChar 'a') (State "a")])
 
 
 -- helper functions
