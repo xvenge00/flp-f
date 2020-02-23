@@ -3,7 +3,7 @@ import System.Exit
 import System.IO
 import Data.Maybe
 
--- utils
+-- =========== UTILS ======================
 splitBy delimiter = foldr f [[]] 
     where f c l@(x:xs) | c == delimiter = []:l
                        | otherwise = (c:x):xs
@@ -13,13 +13,19 @@ removeItem _ []                 = []
 removeItem x (y:ys) | x == y    = removeItem x ys
                     | otherwise = y : removeItem x ys
 
--- type definitions
+
+-- =========== TYPES ====================
+-- State
 newtype State = State String
     deriving (Eq)
 instance Show State where
     show (State s) = s
-    -- showList rs = (show rs) (++)
 
+parseState :: String -> State
+parseState state = State state
+
+
+-- States
 newtype States = States [State]
     deriving (Eq)
 instance Show States where
@@ -27,6 +33,11 @@ instance Show States where
     show (States s) = tail $ foldl addComma "" (map show s)
                             where addComma a b = a ++ "," ++ b
 
+parseStates :: String -> States
+parseStates states = States $ map parseState (splitBy ',' states)
+
+
+-- AlphabetChar
 newtype AlphabetChar = AlphabetChar Char
     deriving (Eq)
 instance Show AlphabetChar where
@@ -37,11 +48,24 @@ newtype Alphabet = Alphabet [AlphabetChar]
 instance Show Alphabet where
     show (Alphabet a) = foldl (++) [] (map show a)
 
-data Rule = Rule State AlphabetChar State
+parseAlphabet :: String -> Alphabet
+parseAlphabet alphabet = Alphabet $ map AlphabetChar alphabet
+
+
+-- Rule
+data Rule = Rule State AlphabetChar State | EpsilonRule State State
     deriving Eq
 instance Show Rule where
-    show (Rule state char state_next) = show state ++ "," ++ show char ++ "," ++ show state_next    -- TODO don't show epsilon (-)
+    show (Rule state char state_next) = show state ++ "," ++ show char ++ "," ++ show state_next
+    show (EpsilonRule state state_next) = show state ++ ",," ++ show state_next
 
+parseRule :: [String] -> Maybe Rule
+parseRule [state, [char], stateNext] = Just $ Rule (parseState state) (AlphabetChar char) (parseState stateNext)
+parseRule [state, [], stateNext] = Just $ EpsilonRule (parseState state) (parseState stateNext)
+parseRule _ = Nothing
+
+
+-- Rules
 data Rules = Rules [Rule]
     deriving Eq
 instance Show Rules where
@@ -49,12 +73,7 @@ instance Show Rules where
     show (Rules r) = tail $ foldl addNewLine "" (map show r)
                             where addNewLine a b = a ++ "\n" ++ b
 
-
-parseRule :: [String] -> Maybe Rule
-parseRule [state, [char], stateNext] = Just $ Rule (parseState state) (AlphabetChar char) (parseState stateNext)
-parseRule [state, [], stateNext] = Just $ Rule (parseState state) (AlphabetChar '-') (parseState stateNext)
-parseRule _ = Nothing
-
+-- TODO move implementation into parseRules
 parseRulesImpl :: [String] -> [Maybe Rule]
 parseRulesImpl lines
     |lines == [] = []
@@ -65,15 +84,8 @@ parseRules lines = case sequence $ parseRulesImpl lines of
                     Just x -> Just $ Rules x
                     Nothing -> Nothing
     
-parseState :: String -> State
-parseState state = State state
 
-parseStates :: String -> States
-parseStates states = States $ map parseState (splitBy ',' states)
-
-parseAlphabet :: String -> Alphabet
-parseAlphabet alphabet = Alphabet $ map AlphabetChar alphabet
-
+-- FSA
 data FSA = FSA {
     states::States,
     alphabet::Alphabet,
@@ -81,15 +93,8 @@ data FSA = FSA {
     final_states::States,
     rules::Rules
 } deriving (Eq)
-
--- instance Show State where
---   show (String x) = show x
-
---   showList rs = unlines (map show rs)
-
 instance Show FSA where
   show (FSA state alphabet start_state final_states rules) = show state ++ "\n" ++ show alphabet ++ "\n" ++ show start_state ++ "\n" ++ show final_states ++ "\n" ++ show rules
-
 
 -- TODO dopln kontrolu na to aby to bolo konzistentne
 parse2FSA :: String -> Maybe FSA
@@ -103,11 +108,13 @@ parse2FSA repr = do
     Just $ FSA states alphabet start_state final_states rules
 
 
+-- ========================== ALGORITHM =======================
 determinize :: FSA -> FSA
 -- TODO
 determinize dka = FSA (States [State "staaaaaav1", State "s2"]) (Alphabet [AlphabetChar 'a', AlphabetChar 'b', AlphabetChar 'c']) (State "s1") (States [State "s1", State "s2"]) (Rules [Rule (State "a") (AlphabetChar 'a') (State "a")])
 
 
+-- ====================== PARSRING INPUT ======================
 -- helper functions
 usage = putStrLn "Usage: rka-2-dka [-ith] [file]"
 exit = exitWith ExitSuccess
@@ -122,6 +129,8 @@ getFile ["-i",file] = readFile file
 getFile ["-t",file] = readFile file
 getFile _ = usage >> exit
 
+
+-- =========================== MAIN ============================
 main = do
     args <- getArgs
     content <- getFile args
