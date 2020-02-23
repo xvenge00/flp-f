@@ -24,13 +24,16 @@ newtype States = States [State]
     deriving (Eq)
 instance Show States where
     show (States []) = ""
-    show (States [s]) = show s
-    show (States ls) = show (head ls) ++ "," ++ show (States (tail ls))
+    show (States s) = tail $ foldl addComma "" (map show s)
+                            where addComma a b = a ++ "," ++ b
+
+newtype Alphabet = Alphabet [Char]
+    deriving (Eq)
+instance Show Alphabet where
+    show (Alphabet a) = a
 
 data Rule = Rule State Char State
     deriving (Eq, Show)
-
-type Alphabet = [Char]
 
 parseRule :: [String] -> Maybe Rule
 parseRule [state, [char], stateNext] = Just $ Rule (parseState state) char (parseState stateNext)
@@ -52,7 +55,7 @@ parseStates :: String -> States
 parseStates states = States $ map parseState (splitBy ',' states)
 
 parseAlphabet :: String -> Alphabet
-parseAlphabet alphabet = alphabet
+parseAlphabet alphabet = Alphabet alphabet
 
 data FSA = FSA {
     states::States,
@@ -85,7 +88,7 @@ parse2FSA repr = do
 
 determinize :: FSA -> FSA
 -- TODO
-determinize dka = FSA (States [State "staaaaaav1", State "s2"]) "abc" (State "s1") (States [State "s1", State "s2"]) [Rule (State "a") 'a' (State "a")]
+determinize dka = FSA (States [State "staaaaaav1", State "s2"]) (Alphabet "abc") (State "s1") (States [State "s1", State "s2"]) [Rule (State "a") 'a' (State "a")]
 
 
 -- helper functions
