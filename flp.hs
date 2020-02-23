@@ -27,17 +27,25 @@ instance Show States where
     show (States s) = tail $ foldl addComma "" (map show s)
                             where addComma a b = a ++ "," ++ b
 
-newtype Alphabet = Alphabet [Char]
+newtype AlphabetChar = AlphabetChar Char
+    deriving (Eq)
+instance Show AlphabetChar where
+    show (AlphabetChar c) = [c]
+
+newtype Alphabet = Alphabet [AlphabetChar]
     deriving (Eq)
 instance Show Alphabet where
-    show (Alphabet a) = a
+    show (Alphabet a) = foldl (++) [] (map show a)
 
-data Rule = Rule State Char State
-    deriving (Eq, Show)
+data Rule = Rule State AlphabetChar State
+    deriving Eq
+instance Show Rule where
+    show (Rule state char state_next) = show state ++ "," ++ show char ++ "," ++ show state_next    -- TODO don't show epsilon (-)
+
 
 parseRule :: [String] -> Maybe Rule
-parseRule [state, [char], stateNext] = Just $ Rule (parseState state) char (parseState stateNext)
-parseRule [state, [], stateNext] = Just $ Rule (parseState state) '-' (parseState stateNext)
+parseRule [state, [char], stateNext] = Just $ Rule (parseState state) (AlphabetChar char) (parseState stateNext)
+parseRule [state, [], stateNext] = Just $ Rule (parseState state) (AlphabetChar '-') (parseState stateNext)
 parseRule _ = Nothing
 
 parseRulesImpl :: [String] -> [Maybe Rule]
@@ -55,7 +63,7 @@ parseStates :: String -> States
 parseStates states = States $ map parseState (splitBy ',' states)
 
 parseAlphabet :: String -> Alphabet
-parseAlphabet alphabet = Alphabet alphabet
+parseAlphabet alphabet = Alphabet $ map AlphabetChar alphabet
 
 data FSA = FSA {
     states::States,
@@ -88,7 +96,7 @@ parse2FSA repr = do
 
 determinize :: FSA -> FSA
 -- TODO
-determinize dka = FSA (States [State "staaaaaav1", State "s2"]) (Alphabet "abc") (State "s1") (States [State "s1", State "s2"]) [Rule (State "a") 'a' (State "a")]
+determinize dka = FSA (States [State "staaaaaav1", State "s2"]) (Alphabet [AlphabetChar 'a', AlphabetChar 'b', AlphabetChar 'c']) (State "s1") (States [State "s1", State "s2"]) [Rule (State "a") (AlphabetChar 'a') (State "a")]
 
 
 -- helper functions
