@@ -8,6 +8,11 @@ splitBy delimiter = foldr f [[]]
     where f c l@(x:xs) | c == delimiter = []:l
                        | otherwise = (c:x):xs
 
+
+removeItem _ []                 = []
+removeItem x (y:ys) | x == y    = removeItem x ys
+                    | otherwise = y : removeItem x ys
+
 -- type definitions
 type State = String
 
@@ -50,12 +55,12 @@ data FSA = FSA {
 -- TODO dopln kontrolu na to aby to bolo konzistentne
 parse2FSA :: String -> Maybe FSA
 parse2FSA repr = do
-    let lines = splitBy '\n' repr   -- TODO maybe makes empty string as last element
+    let lines = splitBy '\n' repr
     let states = parseStates (lines !! 0)
     let alphabet = parseAlphabet (lines !! 1)
     let start_state = parseState (lines !! 2)
     let final_states = parseStates (lines !! 3)
-    rules <- parseRules (drop 4 lines)
+    rules <- parseRules (removeItem "" $ drop 4 lines)  -- TODO maybe remove only last element?
     Just $ FSA states alphabet start_state final_states rules
 
 
