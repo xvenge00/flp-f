@@ -97,6 +97,9 @@ instance Show FSA where
   show (FSA state alphabet start_state final_states rules) = show state ++ "\n" ++ show alphabet ++ "\n" ++ show start_state ++ "\n" ++ show final_states ++ "\n" ++ show rules
 
 -- TODO dopln kontrolu na to aby to bolo konzistentne
+valid :: FSA -> Bool
+valid fsa = True
+
 parse2FSA :: String -> Maybe FSA
 parse2FSA repr = do
     let lines = splitBy '\n' repr
@@ -105,7 +108,10 @@ parse2FSA repr = do
         start_state = parseState (lines !! 2)
         final_states = parseStates (lines !! 3)
     rules <- parseRules (removeItem "" $ drop 4 lines)  -- TODO maybe remove only last element?
-    Just $ FSA states alphabet start_state final_states rules
+    let fsa = FSA states alphabet start_state final_states rules
+    if valid fsa
+        then Just fsa
+        else Nothing
 
 
 -- ========================== ALGORITHM =======================
