@@ -1,105 +1,10 @@
--- FLP Funkcionálny projekt rka-2-dka
--- Adam Venger (xvenge00)
--- 2020
+module FSADeterminize (determinize) where
 
-import System.Environment
-import System.Exit
-import System.IO
 import Data.List (union, delete, (\\), sort, nub, intersect, intercalate, mapAccumL)
 import qualified Data.Map.Strict as Map (fromList, findWithDefault)
 
--- TODO hlint
+import FSATypes
 
--- =========== UTILS ======================
-splitBy delimiter = foldr f [[]] 
-    where f c l@(x:xs) | c == delimiter = []:l
-                       | otherwise = (c:x):xs
-
--- =========== TYPES ====================
--- State
-type State = Integer
-
-parseState :: String -> State
-parseState state = read state :: Integer
-type States = [State]
-
-parseStates :: String -> States
-parseStates states = map parseState (splitBy ',' states)
-
-type Alphabet = [Char]
-
-parseAlphabet :: String -> Alphabet
-parseAlphabet alphabet = alphabet
-
-
--- Rule
-data Rule = Rule {current::State, c::Char, next::State} | EpsilonRule State State
-    deriving (Eq, Show)
-
-parseRule :: [String] -> Maybe Rule
-parseRule [state, [char], stateNext] = Just $ Rule (parseState state) char (parseState stateNext)
-parseRule [state, [], stateNext] = Just $ EpsilonRule (parseState state) (parseState stateNext)
-parseRule _ = Nothing
-
-type Rules = [Rule]
-
--- TODO move implementation into parseRules
-parseRulesImpl :: [String] -> [Maybe Rule]
-parseRulesImpl lines
-    |lines == [] = []
-    |otherwise = parseRule ( splitBy ',' $ head lines ) : (parseRulesImpl $ tail lines)
-
-parseRules :: [String] -> Maybe Rules
-parseRules lines = case sequence $ parseRulesImpl lines of
-                    Just x -> Just $ x
-                    Nothing -> Nothing
-    
-
--- FSA
-data FSA = FSA {
-    states::States,
-    alphabet::Alphabet,
-    start_state::State,
-    final_states::States,
-    rules::Rules
-} deriving (Eq, Show)
-
--- TODO dopln kontrolu na to aby to bolo konzistentne
-valid :: FSA -> Bool
-valid fsa = True
-
-parse2FSA :: String -> Maybe FSA
-parse2FSA repr = do
-    let dfa_lines = lines repr  -- TODO nemusi tam byt index po 4!!!!!!!!!!!!!!!!!!!!!!!!
-        states = parseStates (dfa_lines !! 0)
-        alphabet = parseAlphabet (dfa_lines !! 1)
-        start_state = parseState (dfa_lines !! 2)
-        final_states = parseStates (dfa_lines !! 3)
-    rules <- parseRules (delete "" $ drop 4 dfa_lines)  -- TODO maybe remove only last element?
-    let fsa = FSA states alphabet start_state final_states rules
-    if valid fsa
-        then Just fsa
-        else Nothing
-
-
--- -- ============= 2 STRING =================
-
--- TODO custom interface??
-state2str :: State -> String
-state2str s = show s
-states2str :: States -> String
-states2str states = intercalate "," $ map state2str states
-
-showRule :: Rule -> String
-showRule (Rule state char state_next) = state2str state ++ "," ++ [char] ++ "," ++ state2str state_next
-showRule (EpsilonRule state state_next) = state2str state ++ ",," ++ state2str state_next
-showRules :: Rules -> String
-showRules r = intercalate "\n" $ map showRule r
-
-showFSA :: FSA -> String
-showFSA (FSA states alphabet start_state final_states rules) = intercalate "\n" [states2str states, alphabet, state2str start_state, states2str final_states, showRules rules]
-
--- ========================== ALGORITHM =======================
 determinize :: FSA -> FSA
 determinize old =
     let rule_table_sets = makeRuleTableWithSets (rules old) (alphabet old) (start_state old)
@@ -192,30 +97,3 @@ makeRules table alphabet = foldl (\acc row -> acc ++ (makeRuleFromRow row)) [] t
 
 newFinalStates old new m =
     foldl (\acc n -> acc ++ if null $ intersect old n then [] else [Map.findWithDefault (-1) n m]) [] new
-
--- ====================== PARSRING INPUT ======================
--- helper functions
-usage = putStrLn "Usage: rka-2-dka [-ith] [file]"
-exit = exitWith ExitSuccess
-exitFail = exitWith (ExitFailure 1)
-wrongFormat = putStrLn "Wrong format."
-
--- parsing command line arguments
-getFile :: [String] -> IO String
-getFile ["-i"] = getContents
-getFile ["-t"] = getContents
-getFile ["-i",file] = readFile file
-getFile ["-t",file] = readFile file
-getFile _ = usage >> exit
-
-
--- =========================== MAIN ============================
-main = do
-    args <- getArgs
-    content <- getFile args
-    case parse2FSA content of 
-        Just x -> putStrLn $ showFSA $ if head args == "-t"
-                                        then determinize x 
-                                        else x
-        Nothing -> wrongFormat >> exitFail
-
