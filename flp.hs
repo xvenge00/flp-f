@@ -1,3 +1,7 @@
+-- FLP Funkcionálny projekt rka-2-dka
+-- Adam Venger (xvenge00)
+-- 2020
+
 import System.Environment
 import System.Exit
 import System.IO
@@ -86,9 +90,6 @@ state2str s = show s
 states2str :: States -> String
 states2str states = intercalate "," $ map state2str states
 
-showAplhabet :: Alphabet -> String
-showAplhabet a = a
-
 showRule :: Rule -> String
 showRule (Rule state char state_next) = state2str state ++ "," ++ [char] ++ "," ++ state2str state_next
 showRule (EpsilonRule state state_next) = state2str state ++ ",," ++ state2str state_next
@@ -96,9 +97,9 @@ showRules :: Rules -> String
 showRules r = intercalate "\n" $ map showRule r
 
 showFSA :: FSA -> String
-showFSA (FSA states alphabet start_state final_states rules) = unlines [states2str states, showAplhabet alphabet, state2str start_state, states2str final_states, showRules rules]
+showFSA (FSA states alphabet start_state final_states rules) = intercalate "\n" [states2str states, alphabet, state2str start_state, states2str final_states, showRules rules]
 
--- -- ========================== ALGORITHM =======================
+-- ========================== ALGORITHM =======================
 determinize :: FSA -> FSA
 determinize old =
     let rule_table_sets = makeRuleTableWithSets (rules old) (alphabet old) (start_state old)
@@ -174,7 +175,7 @@ makeRuleTable' rules alphabet [unexplored] table =
             else makeRuleTable' rules alphabet new_unexplored new_table
 makeRuleTable' rules alphabet (u_fst:u_rest) table = 
     let t_after_fst = makeRuleTable' rules alphabet [sort u_fst] table
-    in  makeRuleTable' rules alphabet u_rest t_after_fst
+    in  nub $ makeRuleTable' rules alphabet u_rest t_after_fst  -- TODO find why nub needed
 
 makeRenameMap table = Map.fromList $ zip states [0..]
                         where states = map (fst) table
@@ -218,106 +219,3 @@ main = do
                                         else x
         Nothing -> wrongFormat >> exitFail
 
--- -- =========================== TESTS ============================
-
-testStatesThroughEpsilon = 
-    foldl (&&) True [testStatesThroughEpsilon1, testStatesThroughEpsilon2, testStatesThroughEpsilon3, testStatesThroughEpsilon4, testStatesThroughEpsilon5]
-        where   testStatesThroughEpsilon1 =
-                    let rules = [Rule 1 'a' 1, EpsilonRule 1 2]
-                        state = 1
-                    in (statesThroughEpsilon rules state) == [2]
-
-                testStatesThroughEpsilon2 =
-                    let rules = [EpsilonRule (1) 3]
-                        state = 1
-                    in (statesThroughEpsilon rules state) == [3]
-
-                testStatesThroughEpsilon3 =
-                    let rules = [Rule 1 'c' 3]
-                        state = 1
-                    in (statesThroughEpsilon rules state) == []
-
-                testStatesThroughEpsilon4 =
-                    let rules = []
-                        state = 1
-                    in (statesThroughEpsilon rules state) == []
-
-                testStatesThroughEpsilon5 =
-                    let rules = [EpsilonRule 2 3]
-                        state = 1
-                    in (statesThroughEpsilon rules state) == []
-
-testEpsilonClosure = 
-    foldl (&&) True [testEpsilonClosure1, testEpsilonClosure2, testEpsilonClosure3, testEpsilonClosure4, testEpsilonClosure5, testEpsilonClosure6, testEpsilonClosure7]
-        where
-            testEpsilonClosure1 =
-                let rules = [Rule 1 'a' 1, EpsilonRule 1 2, EpsilonRule 1 3, EpsilonRule 3 1, EpsilonRule 3 4, EpsilonRule 1 1]
-                    toExplore = [1]
-                in (eClosure toExplore rules) == [1, 2, 3, 4]
-
-            testEpsilonClosure2 = 
-                let rules = [EpsilonRule 1 1]
-                    toExplore = [1]
-                in (eClosure toExplore rules) == [1]
-
-            testEpsilonClosure3 = 
-                let rules = [EpsilonRule 1 2]
-                    toExplore = [1]
-                in (eClosure toExplore rules) == [1, 2]
-
-            testEpsilonClosure4 = 
-                let rules = [EpsilonRule 1 1]
-                    toExplore = [2]
-                in (eClosure toExplore rules) == [2]
-
-            testEpsilonClosure5 = 
-                let rules = [EpsilonRule 1 1]
-                    toExplore = []
-                in (eClosure toExplore rules) == []
-
-            testEpsilonClosure6 = 
-                let a = 1
-                    b = 2
-                    c = 3
-                    d = 4
-                    e = 5
-                    rules = [EpsilonRule a b, EpsilonRule a c, EpsilonRule b d, EpsilonRule d e]
-                    toExplore = [a]
-                in (eClosure toExplore rules) == [a,b,c,d,e]
-
-            testEpsilonClosure7 = 
-                let a = 1
-                    b = 2
-                    c = 3
-                    d = 4
-                    e = 5
-                    f = 6
-                    g = 7
-                    h = 8
-                    rules = [EpsilonRule a b, EpsilonRule b c, EpsilonRule c d, Rule d 'a' e, EpsilonRule e f, EpsilonRule f g, Rule g 'a' h]
-                in  (eClosure [e] rules) == [e,f,g]
-
-testReachableIn1 = 
-    foldl (&&) True [testreachableIn1_1, testReachableIn1_2]
-        where
-            testreachableIn1_1 = 
-                let a = 1
-                    b = 2
-                    c = 3
-                    d = 4
-                    rules =  [Rule a 'a' a, EpsilonRule a b, EpsilonRule a c, EpsilonRule c d, EpsilonRule a a]
-                    from = [1, 3]
-                in (reachableIn1 from 'a' rules) == [a,b,c,d]
-            testReachableIn1_2 = 
-                let a = 1
-                    b = 2
-                    c = 3
-                    d = 4
-                    e = 5
-                    f = 6
-                    g = 7
-                    h = 8
-                    rules = [EpsilonRule a b, EpsilonRule b c, EpsilonRule c d, Rule d 'a' e, EpsilonRule e f, EpsilonRule f g, Rule g 'a' h]
-                    start = eClosure [a] rules
-                in (reachableIn1 start 'a' rules) == [e,f,g]
-        
