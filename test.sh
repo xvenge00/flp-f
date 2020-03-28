@@ -11,6 +11,7 @@ DIR_IN="dir_in"
 
 # directory containing output files
 DIR_OUT="dir_out"
+mkdir -p $DIR_OUT
 
 # directory containing reference output files
 DIR_REF="dir_ref"
