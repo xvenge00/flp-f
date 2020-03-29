@@ -2,14 +2,10 @@
 
 module FSAParser where
 
-import Data.List (union, delete, (\\), sort, nub, intersect, mapAccumL)
-import qualified Data.Map.Strict as Map (fromList, findWithDefault)
-
-import Control.Applicative ((<$>), (<*>), (<$), (<*), (<|>))
+import Control.Applicative ((<|>))
 import Control.Arrow (left)
 import Control.Monad ((<=<))
-import Text.Parsec (Parsec, parse,
-        newline, digit, string, char, satisfy, sepBy1, endBy, many1, choice, optional, alphaNum, try)
+import Text.Parsec (parse, newline, digit, char, satisfy, sepBy1, endBy, many1, try)
 import Text.Parsec.String (Parser)
 
 import FSATypes

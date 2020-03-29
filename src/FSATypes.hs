@@ -10,7 +10,8 @@ type States = [State]
 type Symbol = Char
 type Alphabet = [Symbol]
 
-data Rule = Rule {current::State, c::Symbol, next::State} | EpsilonRule {current::State, next::State}
+data Rule = Rule {current::State, c::Symbol, next::State} |
+            EpsilonRule {current::State, next::State}
     deriving (Eq, Show)
 type Rules = [Rule]
 
@@ -24,7 +25,6 @@ data FSA = FSA {
 
 -- -- ============= 2 STRING =================
 
--- TODO custom interface??
 showState :: State -> String
 showState = show
 showStates :: States -> String
@@ -37,4 +37,9 @@ showRules :: Rules -> String
 showRules r = intercalate "\n" $ map showRule r
 
 showFSA :: FSA -> String
-showFSA (FSA states alphabet start_state final_states rules) = intercalate "\n" [showStates states, alphabet, showState start_state, showStates final_states, showRules rules]
+showFSA (FSA states alphabet start_state final_states rules) =
+    intercalate "\n" [showStates states,
+                      alphabet,
+                      showState start_state,
+                      showStates final_states,
+                      showRules rules]

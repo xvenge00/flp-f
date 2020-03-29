@@ -1,10 +1,13 @@
 module FSADeterminize (determinize) where
 
-import Data.List (union, delete, (\\), sort, nub, intersect, intercalate, mapAccumL)
+import Data.List (union, (\\), sort, nub, intersect)
 import qualified Data.Map.Strict as Map (fromList, findWithDefault)
 
 import FSATypes
 
+-- Function transforms an extended finate state automaton to a deterministic finate state automaton.
+-- old    <- a valid extended FSA
+-- return <- valid deterministic FSA  
 determinize :: FSA -> FSA
 determinize old =
     let rule_table_sets = makeRuleTableWithSets (rules old) (alphabet old) (start_state old)
@@ -12,18 +15,18 @@ determinize old =
         rule_table_renamed = renameTable rename_map rule_table_sets
         new_rules = makeRules rule_table_renamed (alphabet old)
         new_states = map fst rule_table_renamed
-        new_alphabet = foldl (\acc r -> acc `union` [c r]) "" new_rules
+        new_alphabet = sort $ nub [c rule | rule <- new_rules]
         new_final = newFinalStates (final_states old) (map fst rule_table_sets) rename_map
         new_start = Map.findWithDefault 0 (eClosure [start_state old] (rules old)) rename_map
     in  FSA new_states new_alphabet new_start new_final new_rules
 
-statesThroughEpsilon :: Rules -> State -> States
-statesThroughEpsilon [] _ = []
-statesThroughEpsilon [Rule {}] _ = []
-statesThroughEpsilon [EpsilonRule s n] state = [n | s == state]
-statesThroughEpsilon (r:rs) state = statesThroughEpsilon [r] state `union` statesThroughEpsilon rs state
 
--- ktore preskumat, pravidla -> vysledny  uzaver
+-- Get states reachable from `state` by epsilon in one step based on rules `r`
+statesThroughEpsilon :: Rules -> State -> States
+statesThroughEpsilon r state = nub [ n | EpsilonRule s n <- r, s == state]
+
+
+-- Create epsilon closure from list of states based on rules
 eClosure :: States -> Rules -> States
 eClosure s r =
     eClosure' s r []
@@ -40,18 +43,9 @@ eClosure s r =
 
 -- z ktorych stavov, akym znakom, pravidla -> vysledok
 -- should have epsilon closure on input
-reachableIn1 :: States -> Char -> Rules -> States
-reachableIn1 [] _ _ = []
-reachableIn1 (s:ss) c rules =
-    sort $ union (reachableBy c rules) (reachableIn1 ss c rules)
-        where reachableBy :: Char -> Rules -> States
-              reachableBy _ [] = []
-              reachableBy char [Rule i_s c n] =
-                  if char == c && i_s == s
-                      then eClosure [n] rules
-                      else []
-              reachableBy _ [EpsilonRule _ _] = []
-              reachableBy c (r:rs) = reachableBy c [r] `union` reachableBy c rs
+reachableBy :: States -> Char -> Rules -> States
+reachableBy states by rules =
+    sort $ nub $ concat [ eClosure [next] rules | Rule curr c next <- rules, c == by, curr `elem` states]
 
 
 -- type RuleTableRow = (States, [States])
@@ -59,13 +53,13 @@ type RuleTable a = [(a, [a])]
 type RuleTableWithSets = RuleTable States
 type RuleTableSimple = RuleTable State
 
-makeRuleTableWithSets rules alphabet start = makeRuleTable' rules alphabet [eClosure [start] rules] []
+makeRuleTableWithSets rules alphabet start = makeRuleTable' rules (sort alphabet) [eClosure [start] rules] []
 
 -- alphabet should be sorted
 makeRuleTable' :: Rules -> Alphabet -> [States] -> RuleTableWithSets -> RuleTableWithSets
 makeRuleTable' _ _ [] table = table
 makeRuleTable' rules alphabet [unexplored] table =
-    let now_generated_states = map (\c -> reachableIn1 unexplored c rules) alphabet
+    let now_generated_states = map (\c -> reachableBy unexplored c rules) alphabet
         new_row = (unexplored, now_generated_states)
         new_table = table ++ [new_row]
         explored = map fst new_table
@@ -87,11 +81,14 @@ renameTable r_map =
         where rename state = Map.findWithDefault (-1) state r_map
 
 makeRules :: RuleTableSimple -> Alphabet -> Rules
+-- makeRules table alphabet = [makeRuleFromRow row | row <- table]
 makeRules table alphabet = foldl (\acc row -> acc ++ makeRuleFromRow row) [] table
     where   makeRuleFromRow :: (State, States) -> Rules
-            makeRuleFromRow row = foldl (\acc s -> acc ++ uncurry (rule (fst row)) s) [] (zip alphabet (snd row))
+            makeRuleFromRow row =
+                foldl (\acc s -> acc ++ uncurry (rule (fst row)) s) [] (zip alphabet (snd row))
             rule :: State -> Char -> State -> Rules
             rule from c to = [Rule from c to | to >= 0]
 
+
 newFinalStates old new m =
-    foldl (\acc n -> acc ++ ([Map.findWithDefault (- 1) n m | not (null $ intersect old n)])) [] new
+    [Map.findWithDefault (- 1) n m | n <- new, not (null $ intersect old n)]
