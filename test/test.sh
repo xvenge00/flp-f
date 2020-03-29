@@ -5,16 +5,19 @@
 # Klára Nečasová (xnecas24)
 
 HS_BIN="./rka-2-dka"
+if [ $# -ge 1 ]; then
+	HS_BIN=$1
+fi;
 
 # directory containing input files
-DIR_IN="dir_in"
+DIR_IN="test/dir_in"
 
 # directory containing output files
-DIR_OUT="dir_out"
+DIR_OUT="test/dir_out"
 mkdir -p $DIR_OUT
 
 # directory containing reference output files
-DIR_REF="dir_ref"
+DIR_REF="test/dir_ref"
 
 SHOW_OUTPUT=false
 

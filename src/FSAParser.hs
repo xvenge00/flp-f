@@ -8,7 +8,6 @@ import qualified Data.Map.Strict as Map (fromList, findWithDefault)
 import Control.Applicative ((<$>), (<*>), (<$), (<*), (<|>))
 import Control.Arrow (left)
 import Control.Monad ((<=<))
-import Data.Bool (bool)
 import Text.Parsec (Parsec, parse,
         newline, digit, string, char, satisfy, sepBy1, endBy, many1, choice, optional, alphaNum, try)
 import Text.Parsec.String (Parser)

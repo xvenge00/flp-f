@@ -1,11 +1,13 @@
 module Main (main) where
 
 import System.Environment (getArgs)
-import System.Exit (die)
+import System.Exit (exitWith, ExitCode(..))
 
 import FSATypes
 import FSAParser
 import FSADeterminize
+
+die msg = putStrLn msg >> exitWith (ExitFailure 1)
 
 main :: IO ()
 main = do
