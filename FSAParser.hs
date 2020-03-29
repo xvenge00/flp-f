@@ -19,11 +19,13 @@ parseFSA :: String -> Either String FSA
 parseFSA = validate <=< left show . parse fsaParser ""
 
 fsaParser :: Parser FSA
-fsaParser = FSA <$> statesP <* newline
-              <*> alphabetP  <* newline
-              <*> stateP     <* newline
-              <*> statesP     <* newline
-              <*> rulesP
+fsaParser =
+  FSA <$>
+    statesP <* newline <*> 
+    alphabetP <* newline <*>
+    stateP <* newline <*>
+    statesP <* newline <*>
+    rulesP
 
 statesP :: Parser States
 statesP = sepBy1 stateP comma
@@ -45,20 +47,15 @@ ruleP = try ruleEpsilonP <|> ruleSymbolP
 ruleEpsilonP = EpsilonRule <$> stateP <* comma <* comma <*> stateP
 ruleSymbolP = Rule <$> stateP <* comma <*> symbP <* comma <*> stateP
 
-
--- oddělovač
 comma :: Parser Char
 comma = char ','
 
--- Validační funkce: všechny stavy musí být v seznamu stavů a všechny symboly v abecedě
 validate :: FSA -> Either String FSA
 validate fsa@FSA{..} = if allOK then Right fsa else Left "invalid FSA"
   where
-      allOK = True
-    -- allOK = '_' `elem` alphabet
-    --      && start `elem` states
-    --      && end `elem` states
-    --      && all ((`elem` states) . fromState) transRules
-    --      && all ((`elem` alphabet) . fromSym) transRules
-    --      && all ((`elem` states) . toState) transRules
-    --      && all (`elem` alphabet) [c | AWrite c <- map toAction transRules]
+    allOK =
+      start_state `elem` states &&
+      all (`elem` states) final_states &&
+      all ((`elem` states) . current) rules &&
+      all ((`elem` states) . next) rules &&
+      all ((`elem` alphabet) . c) [ x | x@(Rule {}) <- rules]
