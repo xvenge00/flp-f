@@ -1,54 +1,64 @@
-module FSAParser (parse2FSA) where
+{-# LANGUAGE RecordWildCards #-}
+
+module FSAParser where
 
 import Data.List (union, delete, (\\), sort, nub, intersect, mapAccumL)
 import qualified Data.Map.Strict as Map (fromList, findWithDefault)
 
+import Control.Applicative ((<$>), (<*>), (<$), (<*), (<|>))
+import Control.Arrow (left)
+import Control.Monad ((<=<))
+import Data.Bool (bool)
+import Text.Parsec (Parsec, parse,
+        newline, digit, string, char, satisfy, sepBy1, endBy, many1, choice, optional, alphaNum, try)
+import Text.Parsec.String (Parser)
+
 import FSATypes
 
-splitBy delimiter = foldr f [[]] 
-    where f c l@(x:xs) | c == delimiter = []:l
-                       | otherwise = (c:x):xs
+parseFSA :: String -> Either String FSA
+parseFSA = validate <=< left show . parse fsaParser ""
 
-parseState :: String -> State
-parseState state = read state :: Integer
+fsaParser :: Parser FSA
+fsaParser = FSA <$> statesP <* newline
+              <*> alphabetP  <* newline
+              <*> stateP     <* newline
+              <*> statesP     <* newline
+              <*> rulesP
+
+statesP :: Parser States
+statesP = sepBy1 stateP comma
+
+stateP :: Parser State
+stateP = read <$> many1 digit
+
+alphabetP :: Parser Alphabet
+alphabetP = many1 symbP
+
+symbP :: Parser Symbol
+symbP = satisfy (`notElem` " ,<>\n\t")
+
+rulesP :: Parser Rules
+rulesP = endBy ruleP newline
+
+ruleP :: Parser Rule
+ruleP = try ruleEpsilonP <|> ruleSymbolP 
+ruleEpsilonP = EpsilonRule <$> stateP <* comma <* comma <*> stateP
+ruleSymbolP = Rule <$> stateP <* comma <*> symbP <* comma <*> stateP
 
 
-parseStates :: String -> States
-parseStates states = map parseState (splitBy ',' states)
+-- oddělovač
+comma :: Parser Char
+comma = char ','
 
-parseAlphabet :: String -> Alphabet
-parseAlphabet alphabet = alphabet
-
-parseRule :: [String] -> Maybe Rule
-parseRule [state, [char], stateNext] = Just $ Rule (parseState state) char (parseState stateNext)
-parseRule [state, [], stateNext] = Just $ EpsilonRule (parseState state) (parseState stateNext)
-parseRule _ = Nothing
-
--- TODO move implementation into parseRules
-parseRulesImpl :: [String] -> [Maybe Rule]
-parseRulesImpl lines
-    |lines == [] = []
-    |otherwise = parseRule ( splitBy ',' $ head lines ) : (parseRulesImpl $ tail lines)
-
-parseRules :: [String] -> Maybe Rules
-parseRules lines = case sequence $ parseRulesImpl lines of
-                    Just x -> Just $ x
-                    Nothing -> Nothing
-    
--- TODO dopln kontrolu na to aby to bolo konzistentne
-valid :: FSA -> Bool
-valid fsa = True
-
-parse2FSA :: String -> Maybe FSA
-parse2FSA repr = do
-    let dfa_lines = lines repr  -- TODO nemusi tam byt index po 4!!!!!!!!!!!!!!!!!!!!!!!!
-        states = parseStates (dfa_lines !! 0)
-        alphabet = parseAlphabet (dfa_lines !! 1)
-        start_state = parseState (dfa_lines !! 2)
-        final_states = parseStates (dfa_lines !! 3)
-    rules <- parseRules (delete "" $ drop 4 dfa_lines)  -- TODO maybe remove only last element?
-    let fsa = FSA states alphabet start_state final_states rules
-    if valid fsa
-        then Just fsa
-        else Nothing
-
+-- Validační funkce: všechny stavy musí být v seznamu stavů a všechny symboly v abecedě
+validate :: FSA -> Either String FSA
+validate fsa@FSA{..} = if allOK then Right fsa else Left "invalid FSA"
+  where
+      allOK = True
+    -- allOK = '_' `elem` alphabet
+    --      && start `elem` states
+    --      && end `elem` states
+    --      && all ((`elem` states) . fromState) transRules
+    --      && all ((`elem` alphabet) . fromSym) transRules
+    --      && all ((`elem` states) . toState) transRules
+    --      && all (`elem` alphabet) [c | AWrite c <- map toAction transRules]

@@ -7,9 +7,10 @@ import Data.List (intercalate)
 type State = Integer
 type States = [State]
 
-type Alphabet = [Char]
+type Symbol = Char
+type Alphabet = [Symbol]
 
-data Rule = Rule {current::State, c::Char, next::State} | EpsilonRule State State
+data Rule = Rule {current::State, c::Symbol, next::State} | EpsilonRule State State
     deriving (Eq, Show)
 type Rules = [Rule]
 

@@ -10,7 +10,7 @@ import FSADeterminize
 main :: IO ()
 main = do
     (action, input) <- procArgs =<< getArgs
-    either die action (j2r $ parse2FSA input)
+    either die action (parseFSA input)
 
 procArgs :: [String] -> IO (FSA -> IO (), String)
 procArgs [x] = do
@@ -34,6 +34,3 @@ dumpFSA fsa = do
 determinizeFSA :: FSA -> IO ()
 determinizeFSA fsa = do
     putStrLn $ showFSA $ determinize $ fsa
-
-j2r (Just x) = Right x
-j2r _ = Left "ahoj"
