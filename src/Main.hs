@@ -14,21 +14,22 @@ main = do
     (action, input) <- procArgs =<< getArgs
     either die action (parseFSA input)
 
--- TODO beter arg parser
 procArgs :: [String] -> IO (FSA -> IO (), String)
 procArgs [x] = do
     input <- getContents
-    case x of
-     "-i" -> return (dumpFSA, input)
-     "-t" -> return (determinizeFSA, input)
-     _    -> die ("unknown option " ++ x)
+    getAction x input
 procArgs [x,y] = do
     input <- readFile y
-    case x of
-     "-i" -> return (dumpFSA, input)
-     "-t" -> return (determinizeFSA, input)
-     _    -> die ("unknown option " ++ x)
+    getAction x input
 procArgs _ = die "expecting two arguments: [-i|-t] [FILE]"
+
+getAction a input =
+    either die (\action -> return (action, input)) (getAction' a)
+        where getAction' x = 
+                case x of
+                    "-i" -> Right dumpFSA
+                    "-t" -> Right determinizeFSA
+                    _    -> Left ("unknown option " ++ x)
 
 dumpFSA :: FSA -> IO ()
 dumpFSA fsa = do
