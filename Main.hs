@@ -12,6 +12,7 @@ main = do
     (action, input) <- procArgs =<< getArgs
     either die action (parseFSA input)
 
+-- TODO beter arg parser
 procArgs :: [String] -> IO (FSA -> IO (), String)
 procArgs [x] = do
     input <- getContents

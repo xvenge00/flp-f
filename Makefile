@@ -1,4 +1,4 @@
-SOURCES=main.hs FSADeterminize.hs FSATypes.hs FSAParser.hs
+SOURCES=Main.hs FSADeterminize.hs FSATypes.hs FSAParser.hs
 EXECUTABLE=rka-2-dka
 BUILD_DIR=build
 TEST_OUT=dir_out
@@ -14,7 +14,7 @@ test: ${EXECUTABLE}
 	./test.sh
 
 pack:
-	zip xvenge00.zip ${SOURCES} Makefile
+	zip flp-fun-xvenge00.zip ${SOURCES} Makefile README.md
 
 clean:
 	rm -rf ${BUILD_DIR} ${EXECUTABLE} ${TEST_OUT}
