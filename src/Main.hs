@@ -32,9 +32,7 @@ getAction a input =
                     _    -> Left ("unknown option " ++ x)
 
 dumpFSA :: FSA -> IO ()
-dumpFSA fsa = do
-    putStrLn (showFSA fsa)
+dumpFSA fsa = putStrLn (showFSA fsa)
 
 determinizeFSA :: FSA -> IO ()
-determinizeFSA fsa = do
-    putStrLn $ showFSA $ determinize $ fsa
+determinizeFSA fsa = putStrLn $ showFSA $ determinize fsa

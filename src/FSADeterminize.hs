@@ -11,20 +11,17 @@ determinize old =
         rename_map = makeRenameMap rule_table_sets
         rule_table_renamed = renameTable rename_map rule_table_sets
         new_rules = makeRules rule_table_renamed (alphabet old)
-        new_states = map (fst) rule_table_renamed
-        new_alphabet = foldl (\acc r -> union acc [c r]) "" new_rules
-        new_final = newFinalStates (final_states old) (map (fst) rule_table_sets) rename_map
+        new_states = map fst rule_table_renamed
+        new_alphabet = foldl (\acc r -> acc `union` [c r]) "" new_rules
+        new_final = newFinalStates (final_states old) (map fst rule_table_sets) rename_map
         new_start = Map.findWithDefault 0 (eClosure [start_state old] (rules old)) rename_map
     in  FSA new_states new_alphabet new_start new_final new_rules
 
 statesThroughEpsilon :: Rules -> State -> States
 statesThroughEpsilon [] _ = []
-statesThroughEpsilon [Rule _ _ _] _ = []
-statesThroughEpsilon [EpsilonRule s n] state =
-    if s == state
-        then [n]
-        else []
-statesThroughEpsilon (r:rs) state = union (statesThroughEpsilon [r] state) (statesThroughEpsilon rs state)
+statesThroughEpsilon [Rule {}] _ = []
+statesThroughEpsilon [EpsilonRule s n] state = [n | s == state]
+statesThroughEpsilon (r:rs) state = statesThroughEpsilon [r] state `union` statesThroughEpsilon rs state
 
 -- ktore preskumat, pravidla -> vysledny  uzaver
 eClosure :: States -> Rules -> States
@@ -38,7 +35,7 @@ eClosure s r =
                 eClosure' new_unexplored rules new_expored
                     where s = head unexplored
                           new_expored = s:explored
-                          new_unexplored = (union unexplored (statesThroughEpsilon rules s)) \\ new_expored
+                          new_unexplored = unexplored `union` statesThroughEpsilon rules s \\ new_expored
 
 
 -- z ktorych stavov, akym znakom, pravidla -> vysledok
@@ -54,7 +51,7 @@ reachableIn1 (s:ss) c rules =
                       then eClosure [n] rules
                       else []
               reachableBy _ [EpsilonRule _ _] = []
-              reachableBy c (r:rs) = union (reachableBy c [r]) (reachableBy c rs)
+              reachableBy c (r:rs) = reachableBy c [r] `union` reachableBy c rs
 
 
 -- type RuleTableRow = (States, [States])
@@ -65,14 +62,14 @@ type RuleTableSimple = RuleTable State
 makeRuleTableWithSets rules alphabet start = makeRuleTable' rules alphabet [eClosure [start] rules] []
 
 -- alphabet should be sorted
-makeRuleTable' :: Rules -> [Char] -> [States] -> RuleTableWithSets -> RuleTableWithSets
+makeRuleTable' :: Rules -> Alphabet -> [States] -> RuleTableWithSets -> RuleTableWithSets
 makeRuleTable' _ _ [] table = table
 makeRuleTable' rules alphabet [unexplored] table =
     let now_generated_states = map (\c -> reachableIn1 unexplored c rules) alphabet
         new_row = (unexplored, now_generated_states)
         new_table = table ++ [new_row]
-        explored = map (fst) new_table
-        new_unexplored = [x | x <- now_generated_states, (notElem x explored) && (x /= [])]
+        explored = map fst new_table
+        new_unexplored = [x | x <- now_generated_states, x `notElem` explored && (x /= [])]
     
     -- all states are explored and no new unexplored states were generated
     in  if null new_unexplored
@@ -83,17 +80,18 @@ makeRuleTable' rules alphabet (u_fst:u_rest) table =
     in  nub $ makeRuleTable' rules alphabet u_rest t_after_fst  -- TODO find why nub needed
 
 makeRenameMap table = Map.fromList $ zip states [0..]
-                        where states = map (fst) table
+                        where states = map fst table
 
-renameTable r_map table = map (\row -> (rename (fst row), map (\col -> rename col) (snd row))) table
-    where rename state = Map.findWithDefault (-1) state r_map
+renameTable r_map =
+    map (\row -> (rename (fst row), map rename (snd row)))
+        where rename state = Map.findWithDefault (-1) state r_map
 
 makeRules :: RuleTableSimple -> Alphabet -> Rules
-makeRules table alphabet = foldl (\acc row -> acc ++ (makeRuleFromRow row)) [] table
+makeRules table alphabet = foldl (\acc row -> acc ++ makeRuleFromRow row) [] table
     where   makeRuleFromRow :: (State, States) -> Rules
-            makeRuleFromRow row = foldl (\acc s -> acc ++ (rule (fst row) (fst s) (snd s))) [] (zip alphabet (snd row))
+            makeRuleFromRow row = foldl (\acc s -> acc ++ uncurry (rule (fst row)) s) [] (zip alphabet (snd row))
             rule :: State -> Char -> State -> Rules
-            rule from c to = if to < 0 then [] else [Rule from c to]
+            rule from c to = [Rule from c to | to >= 0]
 
 newFinalStates old new m =
-    foldl (\acc n -> acc ++ if null $ intersect old n then [] else [Map.findWithDefault (-1) n m]) [] new
+    foldl (\acc n -> acc ++ ([Map.findWithDefault (- 1) n m | not (null $ intersect old n)])) [] new

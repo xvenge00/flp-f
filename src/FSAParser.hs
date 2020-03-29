@@ -57,4 +57,4 @@ validate fsa@FSA{..} = if allOK then Right fsa else Left "invalid FSA"
       all (`elem` states) final_states &&
       all ((`elem` states) . current) rules &&
       all ((`elem` states) . next) rules &&
-      all ((`elem` alphabet) . c) [ x | x@(Rule {}) <- rules]
+      all ((`elem` alphabet) . c) [ x | x@Rule {} <- rules]
