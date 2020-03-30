@@ -31,10 +31,12 @@ showStates :: States -> String
 showStates states = intercalate "," $ map showState states
 
 showRule :: Rule -> String
-showRule (Rule state char state_next) = showState state ++ "," ++ [char] ++ "," ++ showState state_next
-showRule (EpsilonRule state state_next) = showState state ++ ",," ++ showState state_next
+showRule (Rule state char state_next) =
+    showState state ++ "," ++ [char] ++ "," ++ showState state_next ++ "\n"
+showRule (EpsilonRule state state_next) =
+    showState state ++ ",," ++ showState state_next ++ "\n"
 showRules :: Rules -> String
-showRules r = intercalate "\n" $ map showRule r
+showRules r = concatMap showRule r
 
 showFSA :: FSA -> String
 showFSA (FSA states alphabet start_state final_states rules) =

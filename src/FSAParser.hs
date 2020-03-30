@@ -5,7 +5,7 @@ module FSAParser where
 import Control.Applicative ((<|>))
 import Control.Arrow (left)
 import Control.Monad ((<=<))
-import Text.Parsec (parse, newline, digit, char, satisfy, sepBy1, endBy, many1, try)
+import Text.Parsec (parse, newline, digit, char, satisfy, sepBy, endBy, many1, try, many)
 import Text.Parsec.String (Parser)
 
 import FSATypes
@@ -23,15 +23,16 @@ fsaParser =
     rulesP
 
 statesP :: Parser States
-statesP = sepBy1 stateP comma
+statesP = sepBy stateP comma
 
 stateP :: Parser State
 stateP = read <$> many1 digit
 
 alphabetP :: Parser Alphabet
-alphabetP = many1 symbP
+alphabetP = many symbP
 
 symbP :: Parser Symbol
+-- TODO only alphabet
 symbP = satisfy (`notElem` " ,<>\n\t")
 
 rulesP :: Parser Rules
