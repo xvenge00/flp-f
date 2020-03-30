@@ -26,12 +26,11 @@ statesThroughEpsilon :: Rules -> State -> States
 statesThroughEpsilon r state = nub [ n | EpsilonRule s n <- r, s == state]
 
 
--- Create epsilon closure from list of states based on rules
+-- Create epsilon closure from list of states `s` based on rules `r`
 eClosure :: States -> Rules -> States
 eClosure s r =
     eClosure' s r []
         where
-            -- ktore preskumat, pravidla, preskumane stavy -> vysledny  uzaver
             eClosure' :: States -> Rules -> States -> States
             eClosure' [] _ explored = sort explored
             eClosure' unexplored rules explored =
