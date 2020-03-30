@@ -3,3 +3,5 @@ dir_out
 *.o
 rka-2-dka
 *.zip
+out
+stderr

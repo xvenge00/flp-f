@@ -1,105 +1,112 @@
 #!/bin/bash
 
-# simplify-bkg
-# Peter Tisovčík (xtisov00)
-# Klára Nečasová (xnecas24)
+FILE_IN="in"
+FILE_REF="ref"
+FILE_OUT="out"
+FILE_STDERR="stderr"
+# FILE_ERR="err"
+# FILE_CONTROL="ctrl" # file with control options 
 
-HS_BIN="./rka-2-dka"
-if [ $# -ge 1 ]; then
-	HS_BIN=$1
+COLOR_FAIL='\033[0;31m' # red
+COLOR_OK='\033[0;32m'   # green
+NC='\033[0m'
+
+# TODO horible argument parsing!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# dir containing subdirectories with test files
+TEST_DIR="test"
+if [ $# -ge 2 ]; then
+	TEST_DIR=$2
 fi;
 
-# directory containing input files
-DIR_IN="test/dir_in"
+# binary executable
+EXECUTABLE="./rka-2-dka"
+if [ $# -ge 1 ]; then
+	EXECUTABLE=$1
+fi;
 
-# directory containing output files
-DIR_OUT="test/dir_out"
-mkdir -p $DIR_OUT
-
-# directory containing reference output files
-DIR_REF="test/dir_ref"
-
-SHOW_OUTPUT=false
-
-ERROR=0
-ERR_CODE=0
-SEPARATOR="-------------------------------------------"
-
-echoTest() {
-	echo -n -e "\e[36m"
-	echo "$1"
-	echo -n -e "\e[39m"
+clean() {
+    for d in "${TEST_DIR}"/*/ ; do
+        rm -f "$d/${FILE_OUT}" "$d/${FILE_STDERR}"
+    done
 }
 
-check () {
-	ERR=$?
-	ERR_CODE=$ERR
-	OK=0
+print_ok_color() {
+    echo -e "${COLOR_OK}${1}${NC}"
+}
 
-	#check if result is OK or ERROR
-	if [ $ERR -eq 0 ] ; then
-		OK=1
-	fi
+print_fail_color() {
+    echo -e "${COLOR_FAIL}${1}${NC}"
+}
 
-	#correct exit code is in green
-	#incorrect exit code is in red
-	if [ "$1" == "OK"  ] && [  $OK -eq 1 ] ; then
-		echo -ne "\e[92m"
-	elif  [ "$1" == "ERR"  ] && [  $OK -eq 0 ] ; then
-		echo -ne "\e[92m"
+expect_ok() {
+    CURR_TEST="${TEST_DIR}/$1"
+    CMD="$2"
+
+    # run command
+    ${CMD} <"${CURR_TEST}/${FILE_IN}" >"${CURR_TEST}/${FILE_OUT}" 2>"${CURR_TEST}/${FILE_STDERR}"
+    
+    ERR_CODE="${?}"
+    DIFF="$(diff "${CURR_TEST}"/${FILE_REF} "${CURR_TEST}"/${FILE_OUT})"
+
+    if [ -z "${DIFF}" ] && [ "${ERR_CODE}" -eq 0 ]; then
+        print_ok_color "[PASSED] ${CURR_TEST}"
 	else
-		echo -ne "\e[31m"
-		ERROR=$((ERROR + 1)) #number of errors
-	fi
+		print_fail_color "[FAILED] ${CURR_TEST}"
 
-	#print result
-	if [ $ERR -eq 0 ] ; then
-		echo "OK (${2})"
+        # print command
+        echo "${CMD} ${CURR_TEST}/${FILE_IN}"
+
+        # print diff
+        # TODO diff -U0 --label="" --label="" test/002-fail/ref test/002-fail/out
+        #   show only differences
+        echo "${DIFF}"
+	fi
+}
+
+expect_err() {
+    CURR_TEST="${TEST_DIR}/$1"
+    CMD="$2"
+    ERR_EXPECT="$3"
+
+    # run command
+    ${CMD} <"${CURR_TEST}/${FILE_IN}" >"${CURR_TEST}/${FILE_OUT}" 2>"${CURR_TEST}/${FILE_STDERR}"
+    
+    ERR_CODE="${?}"
+
+    if [ "${ERR_CODE}" -eq "${ERR_EXPECT}" ]; then
+        print_ok_color "[PASSED] ${CURR_TEST}"
 	else
-		echo "ERR: ${ERR} (${2})"
+		print_fail_color "[FAILED] ${CURR_TEST}"
+
+        echo "expected err: ${ERR_EXPECT}"
+        echo "got: ${ERR_CODE}"
+
+        # print command
+        echo "${CMD} ${CURR_TEST}/${FILE_IN}"
+
+        cat "${CURR_TEST}/${FILE_OUT}"
 	fi
-
-	#reset of colour
-	echo -n -e "\e[39m"
 }
 
-testArg() {
-    echoTest "${1}"
-    echo "run: " ${HS_BIN} ${2}
-    ${HS_BIN} ${2}
-    check "${3}" "run program with arguments"
-    echo "$SEPARATOR"
-}
+# TODO total score - pass/fail
 
-expectOK() {
-    echoTest "${1}"
-    echo "run: " ${HS_BIN} ${2} "${DIR_IN}/${3}"
-    ${HS_BIN} ${2} "${DIR_IN}/${3}" > "${DIR_OUT}/${3%%.*}.out"
-    # check "${4}" "run program with arguments"
+# clean if first argument is clean
+if [ $# -eq 1 ] && [ "$1" = "clean" ]; then
+    clean
+    exit;
+fi
 
-    if [ "${SHOW_OUTPUT}" == "true" ]; then
-        cat "${DIR_OUT}/${3%%.*}${2}.out"
-    fi
+# TODO pozri ci existuje subor err, ked ano precitaj
+DEFAULT_CMD="${EXECUTABLE} -t"
 
-    #remove extension of filename
-    diff "${DIR_REF}/${3%%.*}.out" "${DIR_OUT}/${3%%.*}.out"
-    check "OK" "compare input and reference files"
+# TODO automatic discover directories
+expect_ok "001-basic" "${DEFAULT_CMD}"
+expect_ok "002-basic" "${DEFAULT_CMD}"
+expect_ok "003-basic" "${DEFAULT_CMD}"
+expect_ok "004-basic" "${DEFAULT_CMD}"
 
-    echo "$SEPARATOR"
-}
+expect_err "101-invalid-opt" "${EXECUTABLE} -o" "1"
 
-expectOK "01 - ref" "-t" "test01.in"
-expectOK "02 - opora" "-t" "test02.in"
-expectOK "03 - simple" "-t" "test03.in"
-expectOK "04 - simple" "-t" "test04.in"
 
-################################################
-# Tests for argument check
-################################################
-
-testArg "00 - invalid option \"-o\"" "-o" "ERR"
-testArg "01 - duplicate option \"-i\" without file" "-i -i" "ERR"
-testArg "02 - duplicate option \"-i\" with file" "-i -i filename" "ERR"
-testArg "03 - no option" "" "ERR"
-testArg "04 - file does not exist" "-i notexisting" "ERR"
 

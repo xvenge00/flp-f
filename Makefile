@@ -19,4 +19,5 @@ pack:
 	zip -r flp-fun-xvenge00.zip ${SOURCES} Makefile README.md ${TEST_DIR}
 
 clean:
+	${TEST_DIR}/test.sh clean
 	rm -rf ${BUILD_DIR} ${EXECUTABLE} ${TEST_OUT}
