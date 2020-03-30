@@ -36,7 +36,7 @@ showRule (Rule state char state_next) =
 showRule (EpsilonRule state state_next) =
     showState state ++ ",," ++ showState state_next ++ "\n"
 showRules :: Rules -> String
-showRules r = concatMap showRule r
+showRules = concatMap showRule
 
 showFSA :: FSA -> String
 showFSA (FSA states alphabet start_state final_states rules) =

@@ -2,7 +2,7 @@
 
 module FSAParser where
 
-import Control.Applicative ((<|>))
+import Control.Applicative ((<|>), (<*>), (<$>), (<$), (<*))
 import Control.Arrow (left)
 import Control.Monad ((<=<))
 import Text.Parsec (parse, newline, digit, char, satisfy, sepBy, endBy, many1, try, many)
