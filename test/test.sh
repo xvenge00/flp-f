@@ -44,7 +44,7 @@ expect_ok() {
     CMD="$2"
 
     # run command
-    ${CMD} <"${CURR_TEST}/${FILE_IN}" >"${CURR_TEST}/${FILE_OUT}" 2>"${CURR_TEST}/${FILE_STDERR}"
+    ${CMD} "${CURR_TEST}/${FILE_IN}" >"${CURR_TEST}/${FILE_OUT}" 2>"${CURR_TEST}/${FILE_STDERR}"
     
     ERR_CODE="${?}"
     DIFF="$(diff "${CURR_TEST}"/${FILE_REF} "${CURR_TEST}"/${FILE_OUT})"
@@ -70,7 +70,7 @@ expect_err() {
     ERR_EXPECT="$3"
 
     # run command
-    ${CMD} <"${CURR_TEST}/${FILE_IN}" >"${CURR_TEST}/${FILE_OUT}" 2>"${CURR_TEST}/${FILE_STDERR}"
+    ${CMD} "${CURR_TEST}/${FILE_IN}" >"${CURR_TEST}/${FILE_OUT}" 2>"${CURR_TEST}/${FILE_STDERR}"
     
     ERR_CODE="${?}"
 
@@ -117,5 +117,6 @@ expect_err "103-end-not-in-states" "${DEFAULT_CMD}" "1"
 expect_err "104-incomplete-alphabet" "${DEFAULT_CMD}" "1"
 expect_err "105-rule-state-not-in-states" "${DEFAULT_CMD}" "1"
 expect_err "106-empty-states" "${DEFAULT_CMD}" "1"
+expect_err "107-missing-input-file" "${DEFAULT_CMD}" "1"
 
 
