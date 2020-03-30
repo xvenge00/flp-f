@@ -101,12 +101,21 @@ fi
 DEFAULT_CMD="${EXECUTABLE} -t"
 
 # TODO automatic discover directories
+expect_ok "000-basic" "${DEFAULT_CMD}"
 expect_ok "001-basic" "${DEFAULT_CMD}"
 expect_ok "002-basic" "${DEFAULT_CMD}"
 expect_ok "003-basic" "${DEFAULT_CMD}"
 expect_ok "004-basic" "${DEFAULT_CMD}"
+expect_ok "005-empty-rules" "${DEFAULT_CMD}"
+expect_ok "006-empty-rules-no-end" "${DEFAULT_CMD}"
+expect_ok "007-empty-alphabet" "${DEFAULT_CMD}"
+expect_ok "008-totaly-empty" "${DEFAULT_CMD}"
 
 expect_err "101-invalid-opt" "${EXECUTABLE} -o" "1"
-
+expect_err "102-start-not-in-states" "${DEFAULT_CMD}" "1"
+expect_err "103-end-not-in-states" "${DEFAULT_CMD}" "1"
+expect_err "104-incomplete-alphabet" "${DEFAULT_CMD}" "1"
+expect_err "105-rule-state-not-in-states" "${DEFAULT_CMD}" "1"
+expect_err "106-empty-states" "${DEFAULT_CMD}" "1"
 
 
