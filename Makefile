@@ -13,11 +13,11 @@ build: ${SOURCES}
 
 test:
 	$(MAKE) build
-	${TEST_DIR}/test.sh
+	${TEST_DIR}/test.sh -e "./${EXECUTABLE} -t" -d ${TEST_DIR}
 
 pack:
 	zip -r flp-fun-xvenge00.zip ${SOURCES} Makefile README.md ${TEST_DIR}
 
 clean:
-	${TEST_DIR}/test.sh clean
+	${TEST_DIR}/test.sh -c -d ${TEST_DIR}
 	rm -rf ${BUILD_DIR} ${EXECUTABLE} ${TEST_OUT}

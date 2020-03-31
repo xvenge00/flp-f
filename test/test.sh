@@ -1,32 +1,31 @@
 #!/bin/bash
 
+##################### global options #########################
+# file names
 FILE_IN="in"
 FILE_REF="ref"
 FILE_OUT="out"
 FILE_STDERR="stderr"
-# FILE_ERR="err"
-# FILE_CONTROL="ctrl" # file with control options 
+FILE_ERR="err"
+FILE_CMD="cmd"
 
+# colours
 COLOR_FAIL='\033[0;31m' # red
 COLOR_OK='\033[0;32m'   # green
 NC='\033[0m'
 
-# TODO horible argument parsing!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-# dir containing subdirectories with test files
+# default options
+DEFAULT_CMD=""
 TEST_DIR="test"
-if [ $# -ge 2 ]; then
-	TEST_DIR=$2
-fi;
+ACTION="TEST"
 
-# binary executable
-EXECUTABLE="./rka-2-dka"
-if [ $# -ge 1 ]; then
-	EXECUTABLE=$1
-fi;
+# fail counter
+FAIL_COUNT=0
 
+#################### helper functions ########################
 clean() {
-    for d in "${TEST_DIR}"/*/ ; do
+    DIR=$1
+    for d in "${DIR}"/*/ ; do
         rm -f "$d/${FILE_OUT}" "$d/${FILE_STDERR}"
     done
 }
@@ -40,7 +39,7 @@ print_fail_color() {
 }
 
 expect_ok() {
-    CURR_TEST="${TEST_DIR}/$1"
+    CURR_TEST="${1::-1}"
     CMD="$2"
 
     # run command
@@ -52,6 +51,8 @@ expect_ok() {
     if [ -z "${DIFF}" ] && [ "${ERR_CODE}" -eq 0 ]; then
         print_ok_color "[PASSED] ${CURR_TEST}"
 	else
+        FAIL_COUNT=$((FAIL_COUNT+1))
+
 		print_fail_color "[FAILED] ${CURR_TEST}"
 
         # print command
@@ -65,7 +66,7 @@ expect_ok() {
 }
 
 expect_err() {
-    CURR_TEST="${TEST_DIR}/$1"
+    CURR_TEST="${1::-1}"
     CMD="$2"
     ERR_EXPECT="$3"
 
@@ -77,6 +78,8 @@ expect_err() {
     if [ "${ERR_CODE}" -eq "${ERR_EXPECT}" ]; then
         print_ok_color "[PASSED] ${CURR_TEST}"
 	else
+        FAIL_COUNT=$(${FAIL_COUNT} + 1)
+
 		print_fail_color "[FAILED] ${CURR_TEST}"
 
         echo "expected err: ${ERR_EXPECT}"
@@ -89,34 +92,65 @@ expect_err() {
 	fi
 }
 
-# TODO total score - pass/fail
+test() {
+    DIR="$1"
+    DEF_CMD="$2"
 
-# clean if first argument is clean
-if [ $# -eq 1 ] && [ "$1" = "clean" ]; then
-    clean
+    for d in "${DIR}"/*/ ; do
+
+        # if error file exists and is other than 0 we should test for expected error
+        EXPECTED_ERR=0
+        if [ -f "${d}${FILE_ERR}" ]; then
+            EXPECTED_ERR=$(cat "${d}${FILE_ERR}")
+        fi
+
+        # if file with alternative command exists then we should use that
+        CMD="${DEF_CMD}"
+        if [ -f "${d}${FILE_CMD}" ]; then
+            CMD=$(cat "${d}${FILE_CMD}")
+        fi
+
+        if [ "${EXPECTED_ERR}" -ne 0 ]; then
+            expect_err "${d}" "${CMD}" "${EXPECTED_ERR}"
+        else
+            expect_ok "${d}" "${CMD}" 
+        fi
+
+    done
+}
+
+print_final_score() {
+    if [ "${FAIL_COUNT}" -eq 0 ]; then
+        print_ok_color "ALL TESTS PASSED"
+    else
+        print_fail_color "${FAIL_COUNT} TESTS FAILED"
+    fi
+}
+
+###################### argument parsing #########################
+while getopts "ce:d:" opt; do
+  case ${opt} in
+    c )
+        ACTION="CLEAN"
+        ;;
+    e )
+        DEFAULT_CMD=$OPTARG
+        ;;
+    d )
+        TEST_DIR=$OPTARG
+        ;;
+    \? )
+        echo "Usage: test.sh [-h] [-e]"
+        ;;
+  esac
+done
+shift $((OPTIND -1))
+
+############################ MAIN ################################
+if [ "${ACTION}" = "CLEAN" ]; then
+    clean "${TEST_DIR}"
     exit;
+else 
+    test "${TEST_DIR}" "${DEFAULT_CMD}"
+    print_final_score
 fi
-
-# TODO pozri ci existuje subor err, ked ano precitaj
-DEFAULT_CMD="${EXECUTABLE} -t"
-
-# TODO automatic discover directories
-expect_ok "000-basic" "${DEFAULT_CMD}"
-expect_ok "001-basic" "${DEFAULT_CMD}"
-expect_ok "002-basic" "${DEFAULT_CMD}"
-expect_ok "003-basic" "${DEFAULT_CMD}"
-expect_ok "004-basic" "${DEFAULT_CMD}"
-expect_ok "005-empty-rules" "${DEFAULT_CMD}"
-expect_ok "006-empty-rules-no-end" "${DEFAULT_CMD}"
-expect_ok "007-empty-alphabet" "${DEFAULT_CMD}"
-expect_ok "008-totaly-empty" "${DEFAULT_CMD}"
-
-expect_err "101-invalid-opt" "${EXECUTABLE} -o" "1"
-expect_err "102-start-not-in-states" "${DEFAULT_CMD}" "1"
-expect_err "103-end-not-in-states" "${DEFAULT_CMD}" "1"
-expect_err "104-incomplete-alphabet" "${DEFAULT_CMD}" "1"
-expect_err "105-rule-state-not-in-states" "${DEFAULT_CMD}" "1"
-expect_err "106-empty-states" "${DEFAULT_CMD}" "1"
-expect_err "107-missing-input-file" "${DEFAULT_CMD}" "1"
-
-
