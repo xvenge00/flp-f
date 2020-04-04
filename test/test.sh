@@ -43,7 +43,11 @@ expect_ok() {
     CMD="$2"
 
     # run command
-    ${CMD} "${CURR_TEST}/${FILE_IN}" >"${CURR_TEST}/${FILE_OUT}" 2>"${CURR_TEST}/${FILE_STDERR}"
+    if [ -f "${CURR_TEST}/${FILE_IN}" ]; then
+        ${CMD} <"${CURR_TEST}/${FILE_IN}" >"${CURR_TEST}/${FILE_OUT}" 2>"${CURR_TEST}/${FILE_STDERR}"
+    else
+        ${CMD} >"${CURR_TEST}/${FILE_OUT}" 2>"${CURR_TEST}/${FILE_STDERR}"
+    fi
     
     ERR_CODE="${?}"
     DIFF="$(diff "${CURR_TEST}"/${FILE_REF} "${CURR_TEST}"/${FILE_OUT})"
@@ -71,7 +75,11 @@ expect_err() {
     ERR_EXPECT="$3"
 
     # run command
-    ${CMD} "${CURR_TEST}/${FILE_IN}" >"${CURR_TEST}/${FILE_OUT}" 2>"${CURR_TEST}/${FILE_STDERR}"
+    if [ -f "${CURR_TEST}/${FILE_IN}" ]; then
+        ${CMD} <"${CURR_TEST}/${FILE_IN}" >"${CURR_TEST}/${FILE_OUT}" 2>"${CURR_TEST}/${FILE_STDERR}"
+    else
+        ${CMD} >"${CURR_TEST}/${FILE_OUT}" 2>"${CURR_TEST}/${FILE_STDERR}"
+    fi
     
     ERR_CODE="${?}"
 
