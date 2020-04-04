@@ -2,15 +2,10 @@
 
 module FSAParser where
 
-import Data.List (union, delete, (\\), sort, nub, intersect, mapAccumL)
-import qualified Data.Map.Strict as Map (fromList, findWithDefault)
-
-import Control.Applicative ((<$>), (<*>), (<$), (<*), (<|>))
+import Control.Applicative ((<|>), (<*>), (<$>), (<$), (<*))
 import Control.Arrow (left)
 import Control.Monad ((<=<))
-import Data.Bool (bool)
-import Text.Parsec (Parsec, parse,
-        newline, digit, string, char, satisfy, sepBy1, endBy, many1, choice, optional, alphaNum, try)
+import Text.Parsec (parse, newline, digit, char, satisfy, sepBy, endBy, many1, try, many)
 import Text.Parsec.String (Parser)
 
 import FSATypes
@@ -28,15 +23,16 @@ fsaParser =
     rulesP
 
 statesP :: Parser States
-statesP = sepBy1 stateP comma
+statesP = sepBy stateP comma
 
 stateP :: Parser State
 stateP = read <$> many1 digit
 
 alphabetP :: Parser Alphabet
-alphabetP = many1 symbP
+alphabetP = many symbP
 
 symbP :: Parser Symbol
+-- TODO only alphabet
 symbP = satisfy (`notElem` " ,<>\n\t")
 
 rulesP :: Parser Rules
@@ -58,4 +54,4 @@ validate fsa@FSA{..} = if allOK then Right fsa else Left "invalid FSA"
       all (`elem` states) final_states &&
       all ((`elem` states) . current) rules &&
       all ((`elem` states) . next) rules &&
-      all ((`elem` alphabet) . c) [ x | x@(Rule {}) <- rules]
+      all ((`elem` alphabet) . c) [ x | x@Rule {} <- rules]
