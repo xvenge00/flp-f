@@ -46,6 +46,7 @@ ruleSymbolP = Rule <$> stateP <* comma <*> symbP <* comma <*> stateP
 comma :: Parser Char
 comma = char ','
 
+-- TODO only one uccurence
 validate :: FSA -> Either String FSA
 validate fsa@FSA{..} = if allOK then Right fsa else Left "invalid FSA"
   where
@@ -54,4 +55,4 @@ validate fsa@FSA{..} = if allOK then Right fsa else Left "invalid FSA"
       all (`elem` states) final_states &&
       all ((`elem` states) . current) rules &&
       all ((`elem` states) . next) rules &&
-      all ((`elem` alphabet) . c) [ x | x@Rule {} <- rules]
+      all (`elem` alphabet) [ c x | x@Rule {} <- rules]
