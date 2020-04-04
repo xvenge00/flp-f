@@ -12,7 +12,7 @@ type Alphabet = [Symbol]
 
 data Rule = Rule {current::State, c::Symbol, next::State} |
             EpsilonRule {current::State, next::State}
-    deriving (Eq, Show)
+    deriving (Eq, Show, Ord)
 type Rules = [Rule]
 
 data FSA = FSA {

@@ -2,13 +2,12 @@ module FSADeterminize (determinize) where
 
 import Data.List (union, (\\), sort, nub, intersect)
 import qualified Data.Map.Strict as Map (fromList, findWithDefault)
-import qualified Data.Set as Set
+-- import qualified Data.Set as Set
 
 import FSATypes
 
--- TODO zmen všetky veci kde appendujes s ++
+-- TODO zoznamy stavov do setov
 
--- TODO tato funkcia je hrozna
 -- Function transforms an extended finate state automata to a deterministic finate state automaton
 -- old    <- a valid extended FSA
 -- return <- valid deterministic FSA  
@@ -16,32 +15,16 @@ determinize :: FSA -> FSA
 determinize old =
     FSA new_states new_alphabet new_start new_final new_rules
         where
-            new_states = map fst rule_table_renamed
-            new_alphabet = sort $ nub [c rule | rule <- new_rules]
-            new_start = Map.findWithDefault 0 (eClosure [start_state old] (rules old)) rename_map
-            new_final = newFinalStates (final_states old) (map fst rule_table_sets) rename_map
-            new_rules = makeRules rule_table_renamed (alphabet old)
+            new_states = map rename set_states
+            new_alphabet = sort $ nub [c_s rule | rule <- set_rules]
+            new_start = rename (eClosure [start_state old] (rules old))
+            new_final = nub $ [rename s | s <- set_states, not $ null $ final_states old `intersect` s]
+            new_rules = sort $ [Rule (rename $ from_s r) (c_s r) (rename $ to_s r) | r <- set_rules]
             
-            rule_table_sets = makeRuleTable (rules old) (alphabet old) (start_state old)
-            rename_map = makeRenameMap rule_table_sets
-            rule_table_renamed = renameTable rename_map rule_table_sets
-            newFinalStates old new m =
-                [Map.findWithDefault (- 1) n m | n <- new, not (null $ old `intersect` n)]
-
-renameTable r_map =
-    map (\row -> (rename (fst row), map rename (snd row)))
-        where rename state = Map.findWithDefault (-1) state r_map
-
-makeRules :: RuleTableSimple -> Alphabet -> Rules
--- makeRules table alphabet = [makeRuleFromRow row | row <- table]
-makeRules table alphabet = foldl (\acc row -> acc ++ makeRuleFromRow row) [] table
-    where   makeRuleFromRow :: (State, States) -> Rules
-            makeRuleFromRow row =
-                foldl (\acc s -> acc ++ uncurry (rule (fst row)) s) [] (zip alphabet (snd row))
-            rule :: State -> Char -> State -> Rules
-            rule from c to = [Rule from c to | to >= 0]
-
-
+            set_rules = sort $ makeNewRules (rules old) (alphabet old) (start_state old)
+            set_states =
+                nub $ (eClosure [start_state old] (rules old)) : (concatMap (\r -> [from_s r, to_s r]) set_rules)
+            rename set = Map.findWithDefault (-1) set $ Map.fromList $ zip set_states [0..]
 
 -- Get states reachable from `state` by epsilon in one step based on rules `r`
 statesThroughEpsilon :: Rules -> State -> States
@@ -70,38 +53,29 @@ reachableBy states by rules =
     sort $ nub $ concat
         [ eClosure [next] rules | Rule curr c next <- rules, c == by, curr `elem` states]
 
-
--- type RuleTableRow = (States, [States])
-type RuleTable a = [(a, [a])]
-type RuleTableWithSets = RuleTable States
-type RuleTableSimple = RuleTable State
+-- TODO change Rule to be more general
+data SetRule = SetRule {from_s::States, c_s::Symbol, to_s::States}
+    deriving (Eq, Show, Ord)
+type SetRules = [SetRule]
 
 -- creates table with set of States representing rules
-makeRuleTable :: Rules -> Alphabet -> State -> RuleTableWithSets
-makeRuleTable rules alphabet start =
-    reverse $ makeRuleTable' rules (sort alphabet) [eClosure [start] rules] []
+makeNewRules :: Rules -> Alphabet -> State -> SetRules
+makeNewRules rules alphabet start =
+    makeNewRules' rules alphabet [eClosure [start] rules] []
 
--- implementation of makeRuleTable
--- alphabet should be sorted
--- resulting table should be reveresed before use to preserve semantic meaning
-makeRuleTable' :: Rules -> Alphabet -> [States] -> RuleTableWithSets -> RuleTableWithSets
-
-makeRuleTable' _ _ [] table = table
-
-makeRuleTable' rules alphabet [exploring] table =
-    makeRuleTable' rules alphabet unexplored (new_row:table)
+-- implementation of makeNewRules
+makeNewRules' :: Rules -> Alphabet -> [States] -> SetRules -> SetRules
+makeNewRules' _ _ [] rules = rules
+makeNewRules' rules alphabet [exploring] set_rules =
+    makeNewRules' rules alphabet unexplored (new_rules ++ set_rules)
         where
             unexplored = [x | x <- generated, x `notElem` explored && (x /= [])]
-            explored = map fst (new_row:table)
-            new_row = (exploring, generated)
+            explored = map from_s (new_rules ++ set_rules)
+            new_rules = [SetRule exploring by to | (by, to) <- zip alphabet generated, not $ null to]
             generated = map (\c -> reachableBy exploring c rules) alphabet 
-
-makeRuleTable' rules alphabet (exploring:unexplored) table = 
-    makeRuleTable' rules alphabet (unexplored \\ explored) table_fst
+makeNewRules' rules alphabet (exploring:unexplored) new_rules = 
+    makeNewRules' rules alphabet (unexplored \\ explored) table_fst
         where 
-            table_fst = makeRuleTable' rules alphabet [exploring] table
-            explored = map fst table_fst
-
-makeRenameMap table = Map.fromList $ zip states [0..]
-                        where states = map fst table
+            table_fst = makeNewRules' rules alphabet [exploring] new_rules
+            explored = map from_s table_fst
 
