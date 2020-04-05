@@ -33,4 +33,4 @@ FSA doesn't have to have any rules.
 `<state list>` must be non-empty and must contain `<start state>`.
 FSA without `<start state>` is not considered valid.
 Both `<final states>` and `<alphabet>` can be empty.
-
+All states, alphabet and rules have to be unique, else FSA is considered invalid.
