@@ -1,3 +1,11 @@
+{-|
+  rka-2-dka
+  author: Adam Venger (xvenge00)
+  year: 2020
+  
+  Functional project FLP
+-}
+
 module Main (main) where
 
 import System.Environment (getArgs)
@@ -7,13 +15,17 @@ import FSATypes
 import FSAParser
 import FSADeterminize
 
-die msg = putStrLn msg >> exitWith (ExitFailure 1)
-
+-- entrypoint
 main :: IO ()
 main = do
     (action, input) <- procArgs =<< getArgs
     either die action (parseFSA input)
 
+-- fail with message
+die :: String -> IO a
+die msg = putStrLn msg >> exitWith (ExitFailure 1)
+
+-- process command line arguments
 procArgs :: [String] -> IO (FSA -> IO (), String)
 procArgs [x] = do
     input <- getContents
@@ -23,6 +35,8 @@ procArgs [x,y] = do
     getAction x input
 procArgs _ = die "expecting two arguments: [-i|-t] [FILE]"
 
+-- pick action based on input parameter
+getAction :: String -> String -> IO (FSA -> IO (), String)
 getAction a input =
     either die (\action -> return (action, input)) (getAction' a)
         where getAction' x = 
@@ -31,8 +45,10 @@ getAction a input =
                     "-t" -> Right determinizeFSA
                     _    -> Left ("unknown option " ++ x)
 
+-- only print representation of fsa from input
 dumpFSA :: FSA -> IO ()
 dumpFSA fsa = putStr (showFSA fsa)
 
+-- determinize fsa from input
 determinizeFSA :: FSA -> IO ()
 determinizeFSA fsa = putStr $ showFSA $ determinize fsa
