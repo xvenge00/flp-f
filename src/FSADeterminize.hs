@@ -13,18 +13,17 @@ import FSATypes
 -- return <- valid deterministic FSA  
 determinize :: FSA -> FSA
 determinize old =
-    FSA new_states new_alphabet new_start new_final new_rules
-        where
-            new_states = map rename set_states
-            new_alphabet = sort $ nub [c_s rule | rule <- set_rules]
-            new_start = rename (eClosure [start_state old] (rules old))
-            new_final = nub $ [rename s | s <- set_states, not $ null $ final_states old `intersect` s]
-            new_rules = sort $ [Rule (rename $ from_s r) (c_s r) (rename $ to_s r) | r <- set_rules]
-            
-            set_rules = sort $ makeNewRules (rules old) (alphabet old) (start_state old)
-            set_states =
-                nub $ (eClosure [start_state old] (rules old)) : (concatMap (\r -> [from_s r, to_s r]) set_rules)
-            rename set = Map.findWithDefault (-1) set $ Map.fromList $ zip set_states [0..]
+    FSA (map rename set_states)
+        (sort $ nub [c_s rule | rule <- set_rules])
+        (rename startEClosure)
+        (nub $ [rename s | s <- set_states, not $ null $ final_states old `intersect` s])
+        [Rule (rename $ from_s r) (c_s r) (rename $ to_s r) | r <- set_rules]
+            where
+                set_rules = sort $ makeNewRules (rules old) (alphabet old) (start_state old)
+                set_states = nub $ startEClosure : map to_s set_rules
+                startEClosure = eClosure [start_state old] (rules old)
+                rename set = Map.findWithDefault (-1) set $ Map.fromList $ zip set_states [0..]
+
 
 -- Get states reachable from `state` by epsilon in one step based on rules `r`
 statesThroughEpsilon :: Rules -> State -> States
@@ -52,6 +51,7 @@ reachableBy :: States -> Char -> Rules -> States
 reachableBy states by rules =
     sort $ nub $ concat
         [ eClosure [next] rules | Rule curr c next <- rules, c == by, curr `elem` states]
+
 
 -- TODO change Rule to be more general
 data SetRule = SetRule {from_s::States, c_s::Symbol, to_s::States}
