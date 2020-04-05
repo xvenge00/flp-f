@@ -19,7 +19,7 @@ determinize old =
         (nub $ [rename s | s <- set_states, not $ null $ final_states old `intersect` s])
         [Rule (rename $ from_s r) (c_s r) (rename $ to_s r) | r <- set_rules]
             where
-                set_rules = sort $ makeNewRules (rules old) (alphabet old) (start_state old)
+                set_rules = sort $ makeNewRules (rules old) (start_state old)
                 set_states = nub $ startEClosure : map to_s set_rules
                 startEClosure = eClosure [start_state old] (rules old)
                 rename set = Map.findWithDefault (-1) set $ Map.fromList $ zip set_states [0..]
@@ -59,9 +59,9 @@ data SetRule = SetRule {from_s::States, c_s::Symbol, to_s::States}
 type SetRules = [SetRule]
 
 -- creates table with set of States representing rules
-makeNewRules :: Rules -> Alphabet -> State -> SetRules
-makeNewRules rules alphabet start =
-    makeNewRules' rules alphabet [eClosure [start] rules] []
+makeNewRules :: Rules -> State -> SetRules
+makeNewRules rules start =
+    makeNewRules' rules (nub $ [ c x | x@Rule {} <- rules]) [eClosure [start] rules] []
 
 -- implementation of makeNewRules
 makeNewRules' :: Rules -> Alphabet -> [States] -> SetRules -> SetRules
